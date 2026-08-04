@@ -17,13 +17,7 @@ import { SplitFlapDisplay } from "@/components/flipboard/split-flap";
 import { useEffect, useState } from "react";
 import { encodeMessage, getDefaultSettings, totalBombeSettings } from "@restless/enigma";
 import { formatNumber } from "@/lib/utils";
-
-const HERO_PHRASES = [
-  "ATTACK AT DAWN",
-  "BLETCHLEY PARK",
-  "THE DIE IS CAST",
-  "WEATHER CLEAR",
-];
+import { HERO_PHRASES } from "@/lib/phrases";
 
 export default function HomePage() {
   const [phraseIdx, setPhraseIdx] = useState(0);
@@ -118,8 +112,8 @@ export default function HomePage() {
               <SplitFlapDisplay
                 text={HERO_PHRASES[phraseIdx]!}
                 size="lg"
-                maxChars={16}
-                staggerMs={36}
+                maxChars={22}
+                staggerMs={28}
               />
             </div>
             <div className="h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
@@ -128,10 +122,10 @@ export default function HomePage() {
                 Ciphertext
               </div>
               <SplitFlapDisplay
-                text={cipher || "················"}
+                text={cipher || "······················"}
                 size="lg"
-                maxChars={16}
-                staggerMs={36}
+                maxChars={22}
+                staggerMs={28}
               />
             </div>
           </div>
