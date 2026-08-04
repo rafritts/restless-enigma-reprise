@@ -1,0 +1,87 @@
+@import "tailwindcss";
+
+:root {
+  --background: #09090b;
+  --foreground: #fafafa;
+  --muted: #a1a1aa;
+  --card: #0c0c0e;
+  --accent: #fbbf24;
+  --ring: rgba(251, 191, 36, 0.35);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+html {
+  color-scheme: dark;
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+::selection {
+  background: rgba(251, 191, 36, 0.28);
+  color: #fffbeb;
+}
+
+/* Split-flap animation */
+@keyframes flap-down {
+  0% {
+    transform: rotateX(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: rotateX(-90deg);
+    opacity: 0.85;
+  }
+}
+
+/* Subtle page enter */
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-rise {
+  animation: rise-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.animate-rise-delay-1 {
+  animation: rise-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.08s both;
+}
+
+.animate-rise-delay-2 {
+  animation: rise-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.16s both;
+}
+
+.animate-rise-delay-3 {
+  animation: rise-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.24s both;
+}
+
+/* Grid cols for plugboard */
+@utility grid-cols-13 {
+  grid-template-columns: repeat(13, minmax(0, 1fr));
+}
+
+/* Scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
+}

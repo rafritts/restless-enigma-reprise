@@ -1,0 +1,14 @@
+{
+  "name": "restless-enigma-reprise",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w @restless/enigma-web",
+    "build": "npm run build -w @restless/enigma && npm run build -w @restless/enigma-web",
+    "test": "npm run test -w @restless/enigma",
+    "lint": "npm run lint -w @restless/enigma-web"
+  }
+}
