@@ -7,7 +7,6 @@ export const HERO_PHRASES = [
   // The Imitation Game / Bletchley lore — weather traffic as the daily crib
   "WEATHER REPORT BISCAY",
   "WETTERVORHERSAGE",
-  "HEIL HITLER",
   "NOTHING TO REPORT",
   // Classic intercept flavor
   "ATTACK AT DAWN",

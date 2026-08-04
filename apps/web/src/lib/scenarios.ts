@@ -42,19 +42,6 @@ export const SCENARIOS: Scenario[] = [
     suggestedCrib: "WEATHER",
   },
   {
-    id: "heil-hitler",
-    title: "Sign-off phrase",
-    subtitle: "Famous closing crib · easy",
-    plaintext: "Position confirmed heil hitler end message",
-    settings: {
-      rotor1Position: "A",
-      rotor2Position: "B",
-      rotor3Position: "A",
-      plugboardSwaps: { C: "D", D: "C" },
-    },
-    suggestedCrib: "HITLER",
-  },
-  {
     id: "nothing-to-report",
     title: "Quiet sector",
     subtitle: "Routine status · easy",
