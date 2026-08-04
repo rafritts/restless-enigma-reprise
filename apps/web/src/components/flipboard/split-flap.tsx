@@ -37,7 +37,9 @@ function FlapGlyph({
         className,
       )}
     >
-      <span className="block leading-none text-amber-100/95">{show}</span>
+      <span className="block scale-110 leading-none text-amber-100/95">
+        {show}
+      </span>
     </div>
   );
 }
@@ -65,13 +67,13 @@ function SplitFlapCell({ value, delayMs = 0, size = "md" }: SplitFlapCellProps) 
     };
   }, [target, display, delayMs]);
 
-  // ~30% larger than the original sm/md/lg cells
+  // Cell footprint stays fixed; type is oversized so the glyph fills the flap
   const dims =
     size === "lg"
-      ? "h-[4.55rem] w-[3.25rem] sm:h-[5.2rem] sm:w-[3.6rem] text-[1.95rem] sm:text-[2.45rem]"
+      ? "h-14 w-10 sm:h-16 sm:w-11 text-[2rem] sm:text-[2.75rem]"
       : size === "sm"
-        ? "h-10 w-[1.95rem] text-sm"
-        : "h-[3.6rem] w-[2.6rem] sm:h-[3.9rem] sm:w-[2.9rem] text-[1.3rem] sm:text-[1.55rem]";
+        ? "h-8 w-6 text-base"
+        : "h-11 w-8 sm:h-12 sm:w-9 text-[1.35rem] sm:text-[1.65rem]";
 
   const char = flipping ? next : display;
   const oldChar = display;
