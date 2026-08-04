@@ -17,6 +17,31 @@ function normalizeChar(ch: string): string {
   return FLAP_CHARS.includes(upper) ? upper : upper;
 }
 
+/**
+ * Full-cell glyph, vertically centered. Parent half-windows clip to top/bottom.
+ * Top half: child is 200% of half-height (= full cell), glyph centered → top of letter shows.
+ * Bottom half: same full-height child shifted up by 50% of itself → bottom of letter shows.
+ */
+function FlapGlyph({
+  char,
+  className,
+}: {
+  char: string;
+  className?: string;
+}) {
+  const show = char === " " ? "\u00A0" : char;
+  return (
+    <div
+      className={cn(
+        "flex h-[200%] w-full items-center justify-center",
+        className,
+      )}
+    >
+      <span className="block leading-none text-amber-100/95">{show}</span>
+    </div>
+  );
+}
+
 function SplitFlapCell({ value, delayMs = 0, size = "md" }: SplitFlapCellProps) {
   const target = normalizeChar(value);
   const [display, setDisplay] = useState(target);
@@ -48,7 +73,7 @@ function SplitFlapCell({ value, delayMs = 0, size = "md" }: SplitFlapCellProps) 
         : "h-11 w-8 text-base sm:h-12 sm:w-9 sm:text-lg";
 
   const char = flipping ? next : display;
-  const show = char === " " ? "" : char;
+  const oldChar = display;
 
   return (
     <div
@@ -59,39 +84,34 @@ function SplitFlapCell({ value, delayMs = 0, size = "md" }: SplitFlapCellProps) 
       style={{ perspective: "600px" }}
     >
       <div className="absolute inset-0 overflow-hidden rounded-md border border-white/10 bg-gradient-to-b from-zinc-800 to-zinc-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
-        {/* static top */}
-        <div className="absolute inset-x-0 top-0 h-1/2 overflow-hidden">
-          <div className="flex h-[200%] items-start justify-center pt-[8%]">
-            <span className="text-amber-100/90">{show}</span>
-          </div>
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-black/50" />
-        </div>
-        {/* static bottom */}
-        <div className="absolute inset-x-0 bottom-0 h-1/2 overflow-hidden">
-          <div className="flex h-[200%] -translate-y-1/2 items-start justify-center pt-[8%]">
-            <span className="text-amber-100/90">{show}</span>
-          </div>
+        {/* Top half — top of centered glyph */}
+        <div className="absolute inset-x-0 top-0 z-[1] h-1/2 overflow-hidden">
+          <FlapGlyph char={char} />
         </div>
 
-        {/* flipping panel */}
+        {/* Bottom half — bottom of centered glyph (full glyph box shifted up) */}
+        <div className="absolute inset-x-0 bottom-0 z-[1] h-1/2 overflow-hidden">
+          <FlapGlyph char={char} className="-translate-y-1/2" />
+        </div>
+
+        {/* Flipping top panel (outgoing letter) */}
         {flipping && (
           <div
-            className="absolute inset-x-0 top-0 h-1/2 origin-bottom overflow-hidden rounded-t-md"
+            className="absolute inset-x-0 top-0 z-[2] h-1/2 origin-bottom overflow-hidden rounded-t-md bg-gradient-to-b from-zinc-700 to-zinc-800 shadow-lg"
             style={{
               transformStyle: "preserve-3d",
-              animation: "flap-down 280ms cubic-bezier(0.4, 0.0, 0.2, 1) forwards",
+              animation:
+                "flap-down 280ms cubic-bezier(0.4, 0.0, 0.2, 1) forwards",
               backfaceVisibility: "hidden",
             }}
           >
-            <div className="flex h-[200%] items-start justify-center bg-gradient-to-b from-zinc-700 to-zinc-800 pt-[8%] shadow-lg">
-              <span className="text-amber-50">{normalizeChar(display) === " " ? "" : normalizeChar(display)}</span>
-            </div>
+            <FlapGlyph char={oldChar} className="text-amber-50" />
           </div>
         )}
 
-        {/* center pin line */}
-        <div className="pointer-events-none absolute inset-x-1 top-1/2 z-10 h-px -translate-y-px bg-black/60" />
-        <div className="pointer-events-none absolute inset-0 rounded-md ring-1 ring-inset ring-white/5" />
+        {/* Center hinge */}
+        <div className="pointer-events-none absolute inset-x-0.5 top-1/2 z-[3] h-px -translate-y-px bg-black/70" />
+        <div className="pointer-events-none absolute inset-0 z-[3] rounded-md ring-1 ring-inset ring-white/5" />
       </div>
     </div>
   );
@@ -124,12 +144,7 @@ export function SplitFlapDisplay({
   }, [text, maxChars, padChar]);
 
   return (
-    <div
-      className={cn(
-        "flex flex-wrap gap-1 sm:gap-1.5",
-        className,
-      )}
-    >
+    <div className={cn("flex flex-wrap gap-1 sm:gap-1.5", className)}>
       {chars.map((ch, i) => (
         <SplitFlapCell
           key={`${i}-${maxChars ?? "dyn"}`}
