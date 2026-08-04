@@ -26,7 +26,7 @@ function normalizeChar(ch: string): string {
 
 /**
  * Full-cell glyph, vertically centered. Parent half-windows clip to top/bottom.
- * Font size is ~58% of the smaller cell dimension so letters fill the flap.
+ * Font size is ~78% of the smaller cell dimension so letters fill the flap.
  */
 function FlapGlyph({
   char,
@@ -44,8 +44,8 @@ function FlapGlyph({
       )}
     >
       <span
-        className="block scale-105 leading-none text-amber-100/95"
-        style={{ fontSize: "58cqmin" }}
+        className="block leading-none text-amber-100/95"
+        style={{ fontSize: "78cqmin" }}
       >
         {show}
       </span>
