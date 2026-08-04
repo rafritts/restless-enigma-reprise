@@ -3,8 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { animate, motion, useMotionValue, useTransform } from "framer-motion";
 import {
-  DEFAULT_CRIB,
-  encodeMessageWithCrib,
+  encodeMessage,
   totalBombeSettings,
   type BombeProgress,
   type BombeResult,
@@ -181,11 +180,9 @@ export function BombeConsole() {
   const loadScenario = (id: string) => {
     const s = SCENARIOS.find((x) => x.id === id);
     if (!s) return;
-    const encoded = encodeMessageWithCrib(
-      s.plaintext,
-      DEFAULT_CRIB,
-      s.settings,
-    );
+    // Encode plaintext only — do not prepend the historical DEFAULT_CRIB.
+    // That prefix made every "success" decode look like garbage at the start.
+    const encoded = encodeMessage(s.plaintext, s.settings);
     setEncodedMessage(encoded);
     setCrib(s.suggestedCrib);
     setResult(null);
@@ -196,6 +193,17 @@ export function BombeConsole() {
   const start = () => {
     if (!encodedMessage.trim()) {
       setError("Paste or load an encoded message first.");
+      return;
+    }
+    const letters = (crib.match(/[A-Za-z]/g) ?? []).length;
+    if (letters > 0 && letters < 4) {
+      setError(
+        "Crib is too short — use at least 4 letters to avoid false positives.",
+      );
+      return;
+    }
+    if (!crib.trim()) {
+      setError("Enter a search crib (known plaintext fragment).");
       return;
     }
     setError(null);
@@ -217,7 +225,7 @@ export function BombeConsole() {
     const msg: BombeWorkerIn = {
       type: "start",
       message: encodedMessage,
-      crib: crib || DEFAULT_CRIB,
+      crib: crib.trim(),
     };
     worker.postMessage(msg);
   };
@@ -297,10 +305,13 @@ export function BombeConsole() {
                 id="crib"
                 value={crib}
                 onChange={(e) => setCrib(e.target.value.toUpperCase())}
-                placeholder={DEFAULT_CRIB.trim()}
+                placeholder="e.g. WEATHER"
                 className="font-mono uppercase"
                 disabled={running}
               />
+              <p className="text-[11px] text-zinc-600">
+                Known plaintext inside the message · 4+ letters recommended
+              </p>
             </div>
 
             <div className="flex flex-wrap gap-2 pt-2">

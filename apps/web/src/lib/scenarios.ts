@@ -91,7 +91,7 @@ export const SCENARIOS: Scenario[] = [
       rotor3Position: "K",
       plugboardSwaps: { H: "U", U: "H" },
     },
-    suggestedCrib: "HUT",
+    suggestedCrib: "INTERCEPTS",
   },
   {
     id: "dover-fog",

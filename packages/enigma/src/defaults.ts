@@ -8,6 +8,7 @@ export const DEFAULT_CRIB = "LNXLWSOSBQ ";
  * Bombe sweep stays interactive in the browser.
  */
 export function getDefaultSettings(): EnigmaSettings {
+  // Single plugboard cable — matches Bombe search space (MAX_PLUGBOARD_CABLES).
   return {
     rotor1Position: "G",
     rotor2Position: "E",
@@ -15,8 +16,6 @@ export function getDefaultSettings(): EnigmaSettings {
     plugboardSwaps: {
       A: "T",
       T: "A",
-      E: "L",
-      L: "E",
     },
   };
 }

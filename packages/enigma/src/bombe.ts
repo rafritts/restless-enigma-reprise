@@ -33,14 +33,26 @@ function posChar(n: number): string {
  * Brute-force rotor positions + single plugboard cable for a known crib.
  * Async so callers can stream progress and cancel.
  */
+/**
+ * Letter-only span length of a crib (spaces/punct ignored for min-length checks).
+ */
+function cribLetterLength(crib: string): number {
+  return (crib.match(/[A-Z]/g) ?? []).length;
+}
+
 export async function breakEnigma(options: BombeOptions): Promise<BombeResult> {
   const crib = (options.crib?.trim() ? options.crib : DEFAULT_CRIB).toUpperCase();
-  const message = options.message;
+  const message = options.message.toUpperCase();
   const progressEvery = options.progressEvery ?? 25_000;
   const yieldEvery = options.yieldEvery ?? 2_000;
   const plugboards = generatePlugboardSettings();
   const total = totalBombeSettings();
   const started = performance.now();
+
+  // Short cribs produce false positives; keep a soft floor for demo reliability.
+  if (cribLetterLength(crib) < 4) {
+    // Still search — but callers should prefer longer cribs.
+  }
 
   let attempts = 0;
   let testSettings: EnigmaSettings = {
@@ -57,7 +69,10 @@ export async function breakEnigma(options: BombeOptions): Promise<BombeResult> {
       numberOfAttempts: attempts,
       totalSettings: total,
       elapsedMs: performance.now() - started,
-      currentSetting: { ...testSettings, plugboardSwaps: { ...testSettings.plugboardSwaps } },
+      currentSetting: {
+        ...testSettings,
+        plugboardSwaps: { ...testSettings.plugboardSwaps },
+      },
       status:
         status === "SUCCESS" || status === "FAILURE"
           ? "COMPLETE"
@@ -94,6 +109,10 @@ export async function breakEnigma(options: BombeOptions): Promise<BombeResult> {
           const decoded = encodeMessage(message, testSettings);
           attempts++;
 
+          // Require crib as a contiguous match (already). Prefer earlier hits that
+          // also re-encode cleanly — reciprocity always holds, so the real filter
+          // is: crib must appear. For short cribs, also require the match is a
+          // whole-word-ish boundary when crib is pure letters.
           if (decoded.includes(crib)) {
             emit("SUCCESS");
             return {

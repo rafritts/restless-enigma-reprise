@@ -55,19 +55,20 @@ function combinePairs(
 let cache: PlugboardMap[] | null = null;
 
 /**
- * All plugboard maps with exactly MAX_PLUGBOARD_CABLES cables
- * (matches original Bombe filter that skipped incomplete boards).
+ * All plugboard maps with 0..MAX_PLUGBOARD_CABLES cables.
+ * Includes the empty board so messages encrypted without a cable still break.
  */
 export function generatePlugboardSettings(): PlugboardMap[] {
   if (cache) return cache;
   const allPairs = generateLetterPairs();
-  const all: PlugboardMap[] = [];
-  // Only exact cable count used by the search (size === MAX * 2)
-  all.push(
-    ...combinePairs(allPairs, MAX_PLUGBOARD_CABLES, 0, {}).filter(
-      (m) => Object.keys(m).length === MAX_PLUGBOARD_CABLES * 2,
-    ),
-  );
+  const all: PlugboardMap[] = [{}]; // zero cables
+  for (let n = 1; n <= MAX_PLUGBOARD_CABLES; n++) {
+    all.push(
+      ...combinePairs(allPairs, n, 0, {}).filter(
+        (m) => Object.keys(m).length === n * 2,
+      ),
+    );
+  }
   cache = all;
   return cache;
 }
