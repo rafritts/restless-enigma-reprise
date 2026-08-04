@@ -3,6 +3,7 @@ export type {
   BombeProgressCallback,
   BombeResult,
   BombeResultStatus,
+  BombeSearchCursor,
   EnigmaSettings,
   PlugboardMap,
   RotorPosition,
@@ -27,7 +28,7 @@ export {
   decodeMessageStripCrib,
 } from "./machine";
 
-export { breakEnigma } from "./bombe";
+export { breakEnigma, advanceCursor } from "./bombe";
 export type { BombeOptions } from "./bombe";
 
 export { RotorStateMachine } from "./rotor-machine";

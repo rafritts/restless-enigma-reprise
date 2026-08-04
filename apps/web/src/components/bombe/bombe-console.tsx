@@ -7,6 +7,7 @@ import {
   totalBombeSettings,
   type BombeProgress,
   type BombeResult,
+  type BombeSearchCursor,
   type EnigmaSettings,
 } from "@restless/enigma";
 import {
@@ -17,6 +18,7 @@ import {
   CheckCircle2,
   XCircle,
   PauseCircle,
+  SkipForward,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,6 +27,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { SplitFlapDisplay } from "@/components/flipboard/split-flap";
+import { HighlightedText } from "@/components/bombe/highlighted-text";
 import { SCENARIOS } from "@/lib/scenarios";
 import { formatDuration, formatNumber } from "@/lib/utils";
 import { clearHandoff, loadHandoff } from "@/lib/handoff";
@@ -44,9 +47,13 @@ function SettingsPills({ settings }: { settings: EnigmaSettings }) {
         {settings.rotor2Position}
         {settings.rotor3Position}
       </span>
-      {plugs && (
+      {plugs ? (
         <span className="rounded-lg border border-white/10 bg-zinc-950/60 px-2.5 py-1 text-sky-200">
           {plugs}
+        </span>
+      ) : (
+        <span className="rounded-lg border border-white/10 bg-zinc-950/60 px-2.5 py-1 text-zinc-500">
+          no cables
         </span>
       )}
     </div>
@@ -128,6 +135,9 @@ export function BombeConsole() {
   const [progress, setProgress] = useState<BombeProgress | null>(null);
   const [result, setResult] = useState<BombeResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [resumeCursor, setResumeCursor] = useState<BombeSearchCursor | null>(
+    null,
+  );
   const workerRef = useRef<Worker | null>(null);
 
   useEffect(() => {
@@ -153,19 +163,28 @@ export function BombeConsole() {
         setProgress(data.progress);
       } else if (data.type === "done") {
         setResult(data.result);
+        setResumeCursor(data.result.resumeCursor);
         setProgress((p) =>
           p
             ? {
                 ...p,
                 numberOfAttempts: data.result.numberOfAttempts,
                 elapsedMs: data.result.elapsedMs,
+                matchesFound: data.result.matchIndex,
                 status:
                   data.result.bombeResultStatus === "INTERRUPTED"
                     ? "USER_INTERRUPTED"
                     : "COMPLETE",
                 currentSetting: data.result.settings,
               }
-            : p,
+            : {
+                numberOfAttempts: data.result.numberOfAttempts,
+                totalSettings: total,
+                elapsedMs: data.result.elapsedMs,
+                matchesFound: data.result.matchIndex,
+                status: "COMPLETE",
+                currentSetting: data.result.settings,
+              },
         );
         setRunning(false);
       } else if (data.type === "error") {
@@ -175,31 +194,23 @@ export function BombeConsole() {
     };
     workerRef.current = worker;
     return worker;
-  }, []);
+  }, [total]);
 
   const loadScenario = (id: string) => {
     const s = SCENARIOS.find((x) => x.id === id);
     if (!s) return;
-    // Encode plaintext only — do not prepend the historical DEFAULT_CRIB.
-    // That prefix made every "success" decode look like garbage at the start.
     const encoded = encodeMessage(s.plaintext, s.settings);
     setEncodedMessage(encoded);
     setCrib(s.suggestedCrib);
     setResult(null);
     setProgress(null);
+    setResumeCursor(null);
     setError(null);
   };
 
-  const start = () => {
+  const runSearch = (from: BombeSearchCursor | null) => {
     if (!encodedMessage.trim()) {
       setError("Paste or load an encoded message first.");
-      return;
-    }
-    const letters = (crib.match(/[A-Za-z]/g) ?? []).length;
-    if (letters > 0 && letters < 4) {
-      setError(
-        "Crib is too short — use at least 4 letters to avoid false positives.",
-      );
       return;
     }
     if (!crib.trim()) {
@@ -207,27 +218,59 @@ export function BombeConsole() {
       return;
     }
     setError(null);
-    setResult(null);
-    setProgress({
-      numberOfAttempts: 0,
-      totalSettings: total,
-      elapsedMs: 0,
-      currentSetting: {
-        rotor1Position: "A",
-        rotor2Position: "A",
-        rotor3Position: "A",
-        plugboardSwaps: {},
-      },
-      status: "STARTED",
-    });
+    if (!from) {
+      setResult(null);
+      setProgress({
+        numberOfAttempts: 0,
+        totalSettings: total,
+        elapsedMs: 0,
+        matchesFound: 0,
+        currentSetting: {
+          rotor1Position: "A",
+          rotor2Position: "A",
+          rotor3Position: "A",
+          plugboardSwaps: {},
+        },
+        status: "STARTED",
+      });
+    } else {
+      setProgress((p) =>
+        p
+          ? { ...p, status: "IN_PROGRESS" }
+          : {
+              numberOfAttempts: from.attemptsSoFar,
+              totalSettings: total,
+              elapsedMs: from.elapsedMsSoFar,
+              matchesFound: from.matchesFound,
+              currentSetting: {
+                rotor1Position: String.fromCharCode(65 + from.r1),
+                rotor2Position: String.fromCharCode(65 + from.r2),
+                rotor3Position: String.fromCharCode(65 + from.r3),
+                plugboardSwaps: {},
+              },
+              status: "IN_PROGRESS",
+            },
+      );
+    }
     setRunning(true);
     const worker = ensureWorker();
     const msg: BombeWorkerIn = {
       type: "start",
       message: encodedMessage,
       crib: crib.trim(),
+      resumeFrom: from,
     };
     worker.postMessage(msg);
+  };
+
+  const start = () => runSearch(null);
+
+  const continueSearch = () => {
+    if (!resumeCursor) {
+      setError("Nothing left to resume — restart the search.");
+      return;
+    }
+    runSearch(resumeCursor);
   };
 
   const interrupt = () => {
@@ -238,14 +281,20 @@ export function BombeConsole() {
     ? (progress.numberOfAttempts / progress.totalSettings) * 100
     : 0;
 
+  const canContinue =
+    !running &&
+    resumeCursor != null &&
+    (result?.bombeResultStatus === "SUCCESS" ||
+      result?.bombeResultStatus === "INTERRUPTED");
+
   const statusBadge = (() => {
     if (running) return <Badge variant="live">Searching</Badge>;
     if (result?.bombeResultStatus === "SUCCESS")
-      return <Badge variant="success">Broken</Badge>;
+      return <Badge variant="success">Crib match</Badge>;
     if (result?.bombeResultStatus === "INTERRUPTED")
       return <Badge variant="muted">Interrupted</Badge>;
     if (result?.bombeResultStatus === "FAILURE")
-      return <Badge variant="danger">No hit</Badge>;
+      return <Badge variant="danger">No more hits</Badge>;
     return <Badge variant="muted">Idle</Badge>;
   })();
 
@@ -258,9 +307,9 @@ export function BombeConsole() {
             Bombe console
           </h1>
           <p className="mt-2 max-w-xl text-zinc-400">
-            Brute-force rotor positions and a single plugboard cable until a
-            known crib appears — progress streams from a dedicated worker
-            thread.
+            Brute-force settings until the crib appears. Short cribs can hit
+            false positives — highlight shows the match; continue searching for
+            the next candidate.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -283,8 +332,8 @@ export function BombeConsole() {
           <CardHeader>
             <CardTitle>Intercept</CardTitle>
             <CardDescription>
-              Ciphertext plus a crib (known plaintext fragment). Default
-              historical crib works if the message was encoded with it.
+              Ciphertext plus a crib (known plaintext fragment). If a hit looks
+              wrong, keep searching.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -310,16 +359,24 @@ export function BombeConsole() {
                 disabled={running}
               />
               <p className="text-[11px] text-zinc-600">
-                Known plaintext inside the message · 4+ letters recommended
+                Longer phrases reduce false positives
               </p>
             </div>
 
             <div className="flex flex-wrap gap-2 pt-2">
               {!running ? (
-                <Button onClick={start} size="lg">
-                  <Play className="h-4 w-4" />
-                  Run Bombe
-                </Button>
+                <>
+                  <Button onClick={start} size="lg">
+                    <Play className="h-4 w-4" />
+                    {result ? "Restart search" : "Run Bombe"}
+                  </Button>
+                  {canContinue && (
+                    <Button onClick={continueSearch} variant="secondary" size="lg">
+                      <SkipForward className="h-4 w-4" />
+                      Continue searching
+                    </Button>
+                  )}
+                </>
               ) : (
                 <Button onClick={interrupt} variant="danger" size="lg">
                   <Square className="h-4 w-4" />
@@ -374,15 +431,15 @@ export function BombeConsole() {
                   }
                 />
                 <Stat
-                  label="Status"
+                  label="Hits"
                   value={
                     running ? (
                       <span className="inline-flex items-center gap-1.5">
                         <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        Live
+                        {progress?.matchesFound ?? 0}
                       </span>
                     ) : (
-                      result?.bombeResultStatus ?? "Idle"
+                      (progress?.matchesFound ?? result?.matchIndex ?? 0)
                     )
                   }
                 />
@@ -430,7 +487,7 @@ export function BombeConsole() {
             }
           >
             <CardHeader>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 {result.bombeResultStatus === "SUCCESS" && (
                   <CheckCircle2 className="h-5 w-5 text-emerald-400" />
                 )}
@@ -442,33 +499,63 @@ export function BombeConsole() {
                 )}
                 <CardTitle>
                   {result.bombeResultStatus === "SUCCESS"
-                    ? "Settings recovered"
+                    ? `Crib match #${result.matchIndex}`
                     : result.bombeResultStatus === "INTERRUPTED"
                       ? "Search interrupted"
-                      : "Crib never appeared"}
+                      : result.matchIndex > 0
+                        ? "No further matches"
+                        : "Crib never appeared"}
                 </CardTitle>
+                {result.bombeResultStatus === "SUCCESS" && (
+                  <Badge variant="muted">candidate</Badge>
+                )}
               </div>
               <CardDescription>
                 {formatNumber(result.numberOfAttempts)} attempts ·{" "}
                 {formatDuration(result.elapsedMs)}
+                {result.bombeResultStatus === "SUCCESS" &&
+                  " · crib highlighted below"}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-5">
-              <SettingsPills settings={result.settings} />
-              <div>
-                <div className="mb-2 text-[11px] font-medium uppercase tracking-[0.16em] text-zinc-500">
-                  Decoded message
-                </div>
-                <div className="rounded-xl border border-white/5 bg-black/30 p-4">
-                  <SplitFlapDisplay
-                    text={result.decodedMessage.slice(0, 24)}
-                    size="md"
-                  />
-                  <p className="mt-3 break-words font-mono text-sm leading-relaxed text-zinc-200">
-                    {result.decodedMessage}
+              {result.bombeResultStatus !== "FAILURE" && (
+                <SettingsPills settings={result.settings} />
+              )}
+              {result.bombeResultStatus === "SUCCESS" && (
+                <div>
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <div className="text-[11px] font-medium uppercase tracking-[0.16em] text-zinc-500">
+                      Decoded message
+                    </div>
+                    {canContinue && (
+                      <Button
+                        onClick={continueSearch}
+                        variant="secondary"
+                        size="sm"
+                      >
+                        <SkipForward className="h-3.5 w-3.5" />
+                        Next match
+                      </Button>
+                    )}
+                  </div>
+                  <div className="rounded-xl border border-white/5 bg-black/30 p-4">
+                    <SplitFlapDisplay
+                      text={result.decodedMessage.slice(0, 24)}
+                      size="md"
+                    />
+                    <div className="mt-3">
+                      <HighlightedText
+                        text={result.decodedMessage}
+                        crib={crib}
+                      />
+                    </div>
+                  </div>
+                  <p className="mt-3 text-xs text-zinc-500">
+                    If the rest of the text looks like noise, this is a false
+                    positive — continue searching for the next crib hit.
                   </p>
                 </div>
-              </div>
+              )}
             </CardContent>
           </Card>
         </motion.div>

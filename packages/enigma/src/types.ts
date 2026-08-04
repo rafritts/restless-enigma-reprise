@@ -13,12 +13,31 @@ export interface EnigmaSettings {
 
 export type BombeResultStatus = "SUCCESS" | "FAILURE" | "INTERRUPTED";
 
+/** Where to continue the brute-force scan after a hit or interrupt */
+export interface BombeSearchCursor {
+  r1: number;
+  r2: number;
+  r3: number;
+  plugIndex: number;
+  attemptsSoFar: number;
+  matchesFound: number;
+  elapsedMsSoFar: number;
+}
+
 export interface BombeResult {
   decodedMessage: string;
   settings: EnigmaSettings;
   numberOfAttempts: number;
   elapsedMs: number;
   bombeResultStatus: BombeResultStatus;
+  /** 1-based index of this crib hit in the current run chain (0 if none) */
+  matchIndex: number;
+  /**
+   * Cursor for the *next* setting after this result.
+   * Present on SUCCESS (continue search) and INTERRUPTED (resume).
+   * Absent on FAILURE (space exhausted).
+   */
+  resumeCursor: BombeSearchCursor | null;
 }
 
 export interface BombeProgress {
@@ -27,6 +46,7 @@ export interface BombeProgress {
   elapsedMs: number;
   currentSetting: EnigmaSettings;
   status: "STARTED" | "IN_PROGRESS" | "COMPLETE" | "USER_INTERRUPTED";
+  matchesFound: number;
 }
 
 export type BombeProgressCallback = (progress: BombeProgress) => void;

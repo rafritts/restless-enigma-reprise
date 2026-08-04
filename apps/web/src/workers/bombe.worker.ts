@@ -2,10 +2,16 @@ import {
   breakEnigma,
   type BombeProgress,
   type BombeResult,
+  type BombeSearchCursor,
 } from "@restless/enigma";
 
 export type BombeWorkerIn =
-  | { type: "start"; message: string; crib: string }
+  | {
+      type: "start";
+      message: string;
+      crib: string;
+      resumeFrom?: BombeSearchCursor | null;
+    }
   | { type: "cancel" };
 
 export type BombeWorkerOut =
@@ -28,6 +34,7 @@ self.onmessage = async (ev: MessageEvent<BombeWorkerIn>) => {
       const result = await breakEnigma({
         message: data.message,
         crib: data.crib,
+        resumeFrom: data.resumeFrom ?? null,
         progressEvery: 8_000,
         yieldEvery: 1_500,
         shouldCancel: () => cancelFlag,
