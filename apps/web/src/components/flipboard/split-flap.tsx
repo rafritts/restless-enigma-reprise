@@ -65,12 +65,13 @@ function SplitFlapCell({ value, delayMs = 0, size = "md" }: SplitFlapCellProps) 
     };
   }, [target, display, delayMs]);
 
+  // ~30% larger than the original sm/md/lg cells
   const dims =
     size === "lg"
-      ? "h-14 w-10 sm:h-16 sm:w-11 text-2xl sm:text-3xl"
+      ? "h-[4.55rem] w-[3.25rem] sm:h-[5.2rem] sm:w-[3.6rem] text-[1.95rem] sm:text-[2.45rem]"
       : size === "sm"
-        ? "h-8 w-6 text-xs"
-        : "h-11 w-8 text-base sm:h-12 sm:w-9 sm:text-lg";
+        ? "h-10 w-[1.95rem] text-sm"
+        : "h-[3.6rem] w-[2.6rem] sm:h-[3.9rem] sm:w-[2.9rem] text-[1.3rem] sm:text-[1.55rem]";
 
   const char = flipping ? next : display;
   const oldChar = display;
