@@ -5,6 +5,13 @@ import { cn } from "@/lib/utils";
 
 const FLAP_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 .,!?'-:/";
 
+/** Cap cell width so short strings don't balloon; height follows aspect ratio. */
+const SIZE_MAX_WIDTH: Record<"sm" | "md" | "lg", string> = {
+  sm: "1.5rem",
+  md: "2.25rem",
+  lg: "2.75rem",
+};
+
 interface SplitFlapCellProps {
   value: string;
   delayMs?: number;
@@ -19,8 +26,7 @@ function normalizeChar(ch: string): string {
 
 /**
  * Full-cell glyph, vertically centered. Parent half-windows clip to top/bottom.
- * Top half: child is 200% of half-height (= full cell), glyph centered → top of letter shows.
- * Bottom half: same full-height child shifted up by 50% of itself → bottom of letter shows.
+ * Font size is ~58% of the smaller cell dimension so letters fill the flap.
  */
 function FlapGlyph({
   char,
@@ -37,7 +43,10 @@ function FlapGlyph({
         className,
       )}
     >
-      <span className="block scale-110 leading-none text-amber-100/95">
+      <span
+        className="block scale-105 leading-none text-amber-100/95"
+        style={{ fontSize: "58cqmin" }}
+      >
         {show}
       </span>
     </div>
@@ -67,37 +76,30 @@ function SplitFlapCell({ value, delayMs = 0, size = "md" }: SplitFlapCellProps) 
     };
   }, [target, display, delayMs]);
 
-  // Cell footprint stays fixed; type is oversized so the glyph fills the flap
-  const dims =
-    size === "lg"
-      ? "h-14 w-10 sm:h-16 sm:w-11 text-[2rem] sm:text-[2.75rem]"
-      : size === "sm"
-        ? "h-8 w-6 text-base"
-        : "h-11 w-8 sm:h-12 sm:w-9 text-[1.35rem] sm:text-[1.65rem]";
-
   const char = flipping ? next : display;
   const oldChar = display;
 
   return (
     <div
-      className={cn(
-        "relative select-none font-mono font-semibold tracking-tight",
-        dims,
-      )}
-      style={{ perspective: "600px" }}
+      className="relative min-w-0 shrink select-none font-mono font-semibold tracking-tight"
+      style={{
+        flex: "1 1 0%",
+        maxWidth: SIZE_MAX_WIDTH[size],
+        aspectRatio: "5 / 7",
+        // size containment so 58cqmin resolves against this cell
+        containerType: "size",
+        perspective: "600px",
+      }}
     >
       <div className="absolute inset-0 overflow-hidden rounded-md border border-white/10 bg-gradient-to-b from-zinc-800 to-zinc-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
-        {/* Top half — top of centered glyph */}
         <div className="absolute inset-x-0 top-0 z-[1] h-1/2 overflow-hidden">
           <FlapGlyph char={char} />
         </div>
 
-        {/* Bottom half — bottom of centered glyph (full glyph box shifted up) */}
         <div className="absolute inset-x-0 bottom-0 z-[1] h-1/2 overflow-hidden">
           <FlapGlyph char={char} className="-translate-y-1/2" />
         </div>
 
-        {/* Flipping top panel (outgoing letter) */}
         {flipping && (
           <div
             className="absolute inset-x-0 top-0 z-[2] h-1/2 origin-bottom overflow-hidden rounded-t-md bg-gradient-to-b from-zinc-700 to-zinc-800 shadow-lg"
@@ -108,11 +110,10 @@ function SplitFlapCell({ value, delayMs = 0, size = "md" }: SplitFlapCellProps) 
               backfaceVisibility: "hidden",
             }}
           >
-            <FlapGlyph char={oldChar} className="text-amber-50" />
+            <FlapGlyph char={oldChar} />
           </div>
         )}
 
-        {/* Center hinge */}
         <div className="pointer-events-none absolute inset-x-0.5 top-1/2 z-[3] h-px -translate-y-px bg-black/70" />
         <div className="pointer-events-none absolute inset-0 z-[3] rounded-md ring-1 ring-inset ring-white/5" />
       </div>
@@ -147,7 +148,13 @@ export function SplitFlapDisplay({
   }, [text, maxChars, padChar]);
 
   return (
-    <div className={cn("flex flex-wrap gap-1 sm:gap-1.5", className)}>
+    <div
+      className={cn(
+        // Always one row: cells shrink evenly to fit the container width
+        "flex w-full min-w-0 flex-nowrap items-stretch gap-1 sm:gap-1.5",
+        className,
+      )}
+    >
       {chars.map((ch, i) => (
         <SplitFlapCell
           key={`${i}-${maxChars ?? "dyn"}`}
