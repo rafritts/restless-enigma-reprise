@@ -540,10 +540,13 @@ export function BombeConsole() {
                   </div>
                   <div className="rounded-xl border border-white/5 bg-black/30 p-4">
                     <SplitFlapDisplay
-                      text={result.decodedMessage.slice(0, 24)}
+                      text={result.decodedMessage}
                       size="md"
                     />
-                    <div className="mt-3">
+                    <div className="mt-3 border-t border-white/5 pt-3">
+                      <div className="mb-1.5 text-[10px] font-medium uppercase tracking-[0.16em] text-zinc-600">
+                        Crib highlight
+                      </div>
                       <HighlightedText
                         text={result.decodedMessage}
                         crib={crib}
