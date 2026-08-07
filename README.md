@@ -36,3 +36,21 @@ npm run build      # production build
 ## License
 
 Private / personal unless otherwise noted.
+
+## Deploy (Vercel)
+
+Project is linked to Vercel under **rafritts-projects/restless-enigma-reprise**.
+
+- Production: https://restless-enigma-reprise.vercel.app
+- Root Directory: `apps/web`
+- Install: `cd ../.. && npm install`
+- Build: `cd ../.. && npm run build -w @restless/enigma-web`
+
+```bash
+npm i -g vercel
+vercel login
+vercel link          # if needed
+vercel --prod        # deploy production
+```
+
+GitHub repo is connected — pushes to `main` should trigger production deploys.
